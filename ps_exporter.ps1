@@ -1,37 +1,4 @@
-﻿##[Ps1 To Exe]
-##
-##Kd3HDZOFADWE8uK1
-##Nc3NCtDXThU=
-##Kd3HFJGZHWLWoLaVvnQnhQ==
-##LM/RF4eFHHGZ7/K1
-##K8rLFtDXTiW5
-##OsHQCZGeTiiZ4NI=
-##OcrLFtDXTiW5
-##LM/BD5WYTiiZ4tI=
-##McvWDJ+OTiiZ4tI=
-##OMvOC56PFnzN8u+Vs1Q=
-##M9jHFoeYB2Hc8u+Vs1Q=
-##PdrWFpmIG2HcofKIo2QX
-##OMfRFJyLFzWE8uK1
-##KsfMAp/KUzWI0g==
-##OsfOAYaPHGbQvbyVvnQX
-##LNzNAIWJGmPcoKHc7Do3uAuO
-##LNzNAIWJGnvYv7eVvnQX
-##M9zLA5mED3nfu77Q7TV64AuzAgg=
-##NcDWAYKED3nfu77Q7TV64AuzAgg=
-##OMvRB4KDHmHQvbyVvnQX
-##P8HPFJGEFzWE8tI=
-##KNzDAJWHD2fS8u+Vgw==
-##P8HSHYKDCX3N8u+Vgw==
-##LNzLEpGeC3fMu77Ro2k3hQ==
-##L97HB5mLAnfMu77Ro2k3hQ==
-##P8HPCZWEGmaZ7/K1
-##L8/UAdDXTlaDjqbQ7iRL9VjRR3A7YdePvKTpwZm5nw==
-##Kc/BRM3KXhU=
-##
-##
-##fd6a9f26a06ea3bc99616d4851b372ba
-<#
+﻿<#
 Description: An HTTP server written in PowerShell for exporting data gathered to prometheus
   In order to gather data, you must have other .ps1 scrips placed in the same folder as this one.
   Those scripts must output in the following format
@@ -73,9 +40,6 @@ function WriteLog($str) {
     return $dateTime + "- " + $str
 }
 
-function RunModules {
-    pass
-}
 
 ##############################
 ###Function Declaration End###
@@ -112,10 +76,11 @@ while ($run) {
         $stream.read($bytes, 0, $bytes.length)
         $resp_msg = "HTTP/1.1 200 OK" + $LF
         $resp_msg += "Content-Type: text/plain; charset=utf-8" + $LF
-        $resp_msg += $CRLF
+        $resp_msg += $LF
 
         foreach ($script in $modules) {
             $resp_msg += . $script
+            $resp_msg += "`n"
         }
 
         $resp_msg += $LF
