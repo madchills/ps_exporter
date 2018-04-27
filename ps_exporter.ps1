@@ -18,7 +18,8 @@ Version: 0.1
 #>
 
 param (
-    [int]$port = 8889
+    [int]$port = 8889,
+    $WriteSplunkLog = $false
 )
 
 $CR = [char]13
@@ -53,6 +54,31 @@ try {
     exit
 }
 
+################################
+###Function Declaration Start###
+################################
+
+function WriteSplunkLog($str) {
+    $date = Get-Date -format o
+    $splunk_out = New-Object -TypeName PSObject
+    $splunk_out | Add-Member -MemberType NoteProperty -name "_time" -Value $date
+    $splunk_log = $str -split '[\r\n]'
+    foreach ($line in $splunk_log) {
+        if ($line -like "#*" -or $line -eq "") {
+            continue
+        }
+        $name, $value = $line -split ' '
+        $splunk_out | Add-Member -MemberType NoteProperty -Name $name -Value $value
+        $splunk_out | ConvertTo-Json -Compress | Add-Content "$pseHome\splunklog.log"
+    }
+}
+
+    
+
+##############################
+###Function Declaration End###
+##############################
+
 #start tcplistener
 $server.Start()
 WriteLog -str "Started HTTP server" | Add-Content "$pseHome\exporter.log"
@@ -77,13 +103,14 @@ while ($run) {
         $resp_msg = "HTTP/1.1 200 OK" + $LF
         $resp_msg += "Content-Type: text/plain; charset=utf-8" + $LF
         $resp_msg += $LF
-
+        $splunk_log = ""
         foreach ($script in $modules) {
-            $resp_msg += . $script
-            $resp_msg += "`n"
-        }
-
-        $resp_msg += $LF
+            $info = . $script
+            $info += "`n"
+            $resp_msg += $info
+            $splunk_log += $info
+            }
+            $resp_msg += $LF
         #$resp_msg = $notfoundpage
         if($stream.canwrite -and $resp_msg){
             WriteLog -str "[Send Response]" | Add-Content "$pseHome\exporter.log"
@@ -95,6 +122,11 @@ while ($run) {
     $client.close()
     $stream.close()
     WriteLog -str "finished request" | Add-Content "$pseHome\exporter.log"
+    if($writesplunklog -eq $true){
+        $splunk_log | select-string -InputObject {$_} -Pattern "TYPE" -AllMatches
+        WriteSplunkLog($splunk_log)
+    }
+   
 }
 
 $server.Stop()
