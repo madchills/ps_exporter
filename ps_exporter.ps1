@@ -1,4 +1,4 @@
-<#
+﻿<#
 Description: An HTTP server written in PowerShell for exporting data gathered to prometheus
   In order to gather data, you must have other .ps1 scrips placed in the same folder as this one.
   Those scripts must output in the following format
@@ -21,14 +21,6 @@ param (
     [int]$port = 8889
 )
 
-$pseParams = @{}
-$notfoundpage = @"
-<html>
-<head><title>404 Not Found</title></head>
-<body><h1>404 Not Found</h1><hr><p>psExporter</p></body>
-</html>
-"@
-
 $CR = [char]13
 $LF = [char]10
 $CRLF = [char]13 + [char]10
@@ -39,8 +31,6 @@ $SP = [char]32
 $pseHome = $myInvocation.MyCommand.Path | Split-Path
 Set-Location $pseHome
 
-$modules = (Get-ChildItem "$pseHome\modules" -Filter "*.ps1").FullName
-
 ################################
 ###Function Declaration Start###
 ################################
@@ -50,9 +40,6 @@ function WriteLog($str) {
     return $dateTime + "- " + $str
 }
 
-function RunModules {
-    pass
-}
 
 ##############################
 ###Function Declaration End###
@@ -73,13 +60,13 @@ WriteLog -str "Started HTTP server" | Add-Content "$pseHome\exporter.log"
 #begin loop to listen for connection attempts
 $run = $true
 while ($run) {
+    $modules = (Get-ChildItem "$pseHome\modules" -Filter "*.ps1").FullName
+
     $client = $server.AcceptTcpClient()
     WriteLog -str "Got a request" | Add-Content "$pseHome\exporter.log"
 
-    #Clear params per connection
-    $pseParams = @{}
-
     $stream = $client.GetStream()
+    $stream
 
     if ($stream.CanRead) {
         $avail = $client.Available
@@ -87,14 +74,17 @@ while ($run) {
 
         $bytes = new-object system.byte[] $avail
         $stream.read($bytes, 0, $bytes.length)
-        $req_msg = [system.text.encoding]::utf8.getstring($bytes)
+        $resp_msg = "HTTP/1.1 200 OK" + $LF
+        $resp_msg += "Content-Type: text/plain; charset=utf-8" + $LF
+        $resp_msg += $LF
 
-        #$resp_msg = GenerateMessage $req_msg
-        [string]$resp_msg = $null
         foreach ($script in $modules) {
             $resp_msg += . $script
+            $resp_msg += "`n"
         }
 
+        $resp_msg += $LF
+        #$resp_msg = $notfoundpage
         if($stream.canwrite -and $resp_msg){
             WriteLog -str "[Send Response]" | Add-Content "$pseHome\exporter.log"
             $msg = [system.text.encoding]::utf8.getbytes($resp_msg)
